@@ -48,8 +48,17 @@
                 <tbody class="border-b-8 border-dark">
                     <template x-for="values,rarity in collection_bubblejet_og">
                         <tr class="text-xs md:text-sm text-gray-400">
-                            <td>Bubblejet OG</td>
+                            <td>OG 22</td>
                             <td x-text="rarity" class="capitalize" :class="values.color"></td>
+                            <td><a x-bind:href="values.url" class="hover:text-red-500" x-text="values.floor" target="_blank"></a></td>
+                        </tr>
+                    </template>
+                </tbody>
+                <tbody class="border-b-8 border-dark">
+                    <template x-for="values,rarity in collection_bubblejet_og_2">
+                        <tr class="text-xs md:text-sm text-gray-400">
+                            <td>OG 23</td>
+                            <td x-text="rarity + 23" class="capitalize" :class="values.color"></td>
                             <td><a x-bind:href="values.url" class="hover:text-red-500" x-text="values.floor" target="_blank"></a></td>
                         </tr>
                     </template>
@@ -88,6 +97,7 @@
                 this.fetchJpgStoreBubblejets();
                 this.fetchJpgStoreJavelins();
                 this.fetchJpgStoreBubblejetsOG();
+                this.fetchJpgStoreBubblejetsOG2();
             },
             async fetchJpgStoreJavelins(){
                 this.isLoadingJpg = true;
@@ -298,6 +308,77 @@
                     this.jpgLoaded = true;
                 }
             },
+            async fetchJpgStoreBubblejetsOG2(){
+                this.isLoadingJpg = true;
+                let jpgListings = [];
+                let processedListings = [];
+
+                let response = await fetch(`https://server.jpgstoreapis.com/policy/a34d2c4d1e27334ff6e580904bf4b69cc34640e9f9a495b704d4f0ef/listings`);
+                if (!response.ok) {
+                    this.isLoadingJpg = false;
+                    this.isErrorJpg = true;
+                    this.errorJpg = `Error: ${response.status} - ${response.statusText}`
+                } else {
+
+                    let responseJson = await response.json();
+                    let nextPageCursor = responseJson['nextPageCursor'];
+                    let plots = responseJson['listings'];
+
+                    plots.forEach(plot => {
+                        if(plot['listing_type'] === 'SINGLE_ASSET'){
+                            let splittedName = plot['display_name'].split(" ")
+                            let rarity = splittedName[5];
+                            let id = plot['asset_id'];
+                            let price = plot['price_lovelace']/1000000;
+
+                            console.log(splittedName)
+                            console.log(rarity)
+                            if(price < this.collection_bubblejet_og_2[rarity]['floor'] || this.collection_bubblejet_og_2[rarity]['floor'] == 0){
+                                this.collection_bubblejet_og_2[rarity]['floor'] = price;
+                                this.collection_bubblejet_og_2[rarity]['asset_id'] = id;
+                                this.collection_bubblejet_og_2[rarity]['price_diff'] =  (price - this.collection_bubblejet_og_2[rarity]['mint']).toFixed(2);
+                                this.collection_bubblejet_og_2[rarity]['price_diff_percentage'] = (this.collection_bubblejet_og_2[rarity]['price_diff'] / (this.collection_bubblejet_og_2[rarity]['mint'] / 100)).toFixed(2).toString() + '%';
+                                this.collection_bubblejet_og_2[rarity]['url'] =  'https://www.jpg.store/asset/' + id; 
+                            }
+                        }
+                    });
+
+                    while (nextPageCursor !== null){
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        response = await fetch(`https://server.jpgstoreapis.com/policy/a34d2c4d1e27334ff6e580904bf4b69cc34640e9f9a495b704d4f0ef/listings?cursor=${nextPageCursor}`);
+                        if (!response.ok) {
+                            this.isLoadingJpg = false;
+                            this.isErrorJpg = true;
+                            this.errorJpg = `Error: ${response.status} - ${response.statusText}`
+                            break;
+                        }
+
+                        responseJson = await response.json();
+                        nextPageCursor = responseJson['nextPageCursor'];
+                        plots = responseJson['listings'];
+
+                        plots.forEach(plot => {
+                            if(plot['listing_type'] === 'SINGLE_ASSET'){
+                                let splittedName = plot['display_name'].split(" ")
+                                let rarity = splittedName[5];
+                                let id = plot['asset_id'];
+                                let price = plot['price_lovelace']/1000000;
+
+                                if(price < this.collection_bubblejet_og_2[rarity]['floor'] || this.collection_bubblejet_og_2[rarity]['floor'] == 0){
+                                    this.collection_bubblejet_og_2[rarity]['floor'] = price;
+                                    this.collection_bubblejet_og_2[rarity]['asset_id'] = id;
+                                    this.collection_bubblejet_og_2[rarity]['price_diff'] =  (price - this.collection_bubblejet_og_2[rarity]['mint']).toFixed(2);
+                                    this.collection_bubblejet_og_2[rarity]['price_diff_percentage'] = (this.collection_bubblejet_og_2[rarity]['price_diff'] / (this.collection_bubblejet_og_2[rarity]['mint'] / 100)).toFixed(2).toString() + '%';
+                                    this.collection_bubblejet_og_2[rarity]['url'] =  'https://www.jpg.store/asset/' + id; 
+                                }
+                            }
+                        });
+
+                    }
+                    this.isLoadingJpg = false;
+                    this.jpgLoaded = true;
+                }
+            },
 
             collection_javelin: {
                 'CM22': {
@@ -450,6 +531,59 @@
                     'color': 'text-yellow-500',
                     'in_wallet': 0,
                     'mint': 15,
+                    'floor': 0,
+                    'asset_id': 0,
+                    'url': '',
+                    'price_diff': 0,
+                    'price_diff_percentage': 0,
+                }
+           },
+
+           collection_bubblejet_og_2: {
+                'CM': {
+                    'color': 'text-gray-400',
+                    'in_wallet': 0,
+                    'mint': 5,
+                    'floor': 0,
+                    'asset_id': 0,
+                    'url': '',
+                    'price_diff': 0,
+                    'price_diff_percentage': 0,
+                },
+                'UC': {
+                    'color': 'text-green-500',
+                    'in_wallet': 0,
+                    'mint': 5,
+                    'floor': 0,
+                    'asset_id': 0,
+                    'url': '',
+                    'price_diff': 0,
+                    'price_diff_percentage': 0,
+                },
+                'RA': {
+                    'color': 'text-blue-500',
+                    'in_wallet': 0,
+                    'mint': 5,
+                    'floor': 0,
+                    'asset_id': 0,
+                    'url': '',
+                    'price_diff': 0,
+                    'price_diff_percentage': 0,
+                },
+                'LE': {
+                    'color': 'text-pink-500',
+                    'in_wallet': 0,
+                    'mint': 5,
+                    'floor': 0,
+                    'asset_id': 0,
+                    'url': '',
+                    'price_diff': 0,
+                    'price_diff_percentage': 0,
+                },
+                'MY': {
+                    'color': 'text-yellow-500',
+                    'in_wallet': 0,
+                    'mint': 5,
                     'floor': 0,
                     'asset_id': 0,
                     'url': '',
